@@ -20,6 +20,7 @@ export interface Task {
   column_id: number;
   title: string;
   description?: string;
+  priority?: 'high' | 'medium' | 'low';
   order: number;
   created_at: string;
   updated_at: string;
