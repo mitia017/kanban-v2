@@ -2,7 +2,7 @@
 
 A production-ready Kanban Board application (Trello-style) built with Vue 3, Vite, TailwindCSS, and Pinia.
 
-![Kanban Board preview](https://via.placeholder.com/800x450?text=Kanban+Board+Preview)
+![Kanban Board preview](screenshots/preview.png)
 
 ## 🚀 Features
 
