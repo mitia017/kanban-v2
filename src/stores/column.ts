@@ -9,6 +9,7 @@ export const useColumnStore = defineStore('column', {
     loading: false,
     error: null as string | null,
   }),
+
   actions: {
     async fetchColumns(kanbanId: number) {
       this.loading = true;
@@ -22,9 +23,14 @@ export const useColumnStore = defineStore('column', {
         this.loading = false;
       }
     },
+
     async createColumn(kanbanId: number, data: Partial<Column>) {
       try {
-        const response = await columnService.create(kanbanId, data);
+        const order = this.columns.length;
+        const response = await columnService.create(kanbanId, {
+          ...data,
+          order,
+        });
         this.columns.push(response.data);
         toast.success('Column added');
         return response.data;
@@ -34,9 +40,11 @@ export const useColumnStore = defineStore('column', {
         throw err;
       }
     },
+
     async updateColumn(id: number, data: Partial<Column>) {
-      const originalColumn = this.columns.find(c => c.id === id);
-      const index = this.columns.findIndex(c => c.id === id);
+      const index = this.columns.findIndex((c) => c.id === id);
+      const originalColumn = index !== -1 ? { ...this.columns[index] } : null;
+
       if (index !== -1) {
         this.columns[index] = { ...this.columns[index], ...data };
       }
@@ -45,16 +53,28 @@ export const useColumnStore = defineStore('column', {
         const response = await columnService.update(id, data);
         if (index !== -1) this.columns[index] = response.data;
       } catch (err: any) {
-        if (index !== -1 && originalColumn) this.columns[index] = originalColumn;
+        if (index !== -1 && originalColumn)
+          this.columns[index] = originalColumn;
         this.error = err.message || 'Failed to update column';
         toast.error(this.error || 'Error');
         throw err;
       }
     },
+
     async deleteColumn(id: number) {
       try {
         await columnService.delete(id);
-        this.columns = this.columns.filter(c => c.id !== id);
+        this.columns = this.columns.filter((c) => c.id !== id);
+
+        // Recalcul des orders après suppression
+        this.columns = this.columns.map((col, i) => ({ ...col, order: i }));
+
+        const updates = this.columns.map((col) => ({
+          id: col.id,
+          order: col.order,
+        }));
+        if (updates.length > 0) await columnService.reorder(updates);
+
         toast.success('Column deleted');
       } catch (err: any) {
         this.error = err.message || 'Failed to delete column';
@@ -62,13 +82,26 @@ export const useColumnStore = defineStore('column', {
         throw err;
       }
     },
-    updateColumnsOrder(newColumns: Column[]) {
-      this.columns = newColumns;
-      newColumns.forEach((col, index) => {
-        if (col.order !== index) {
-          this.updateColumn(col.id, { order: index });
-        }
-      });
-    }
-  }
+
+    async updateColumnsOrder(newColumns: Column[]) {
+      const snapshot = [...this.columns];
+
+      // Recalcul propre des orders selon nouvelle position
+      this.columns = newColumns.map((col, index) => ({ ...col, order: index }));
+
+      try {
+        // Un seul appel batch vers Laravel
+        const updates = this.columns.map((col) => ({
+          id: col.id,
+          order: col.order,
+        }));
+        await columnService.reorder(updates);
+      } catch (err: any) {
+        // Rollback
+        this.columns = snapshot;
+        this.error = err.message || 'Failed to reorder columns';
+        toast.error(this.error || 'Error');
+      }
+    },
+  },
 });
