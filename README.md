@@ -2,7 +2,7 @@
 
 A production-ready Kanban Board application (Trello-style) built with Vue 3, Vite, TailwindCSS, and Pinia.
 
-![Kanban Board Placeholder](https://via.placeholder.com/800x450?text=Kanban+Board+Preview)
+![Kanban Board preview](https://via.placeholder.com/800x450?text=Kanban+Board+Preview)
 
 ## 🚀 Features
 
@@ -30,18 +30,21 @@ A production-ready Kanban Board application (Trello-style) built with Vue 3, Vit
 ## 📦 Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd <project-folder>
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Configure API**
    Update the base URL in `src/api/client.ts`:
+
    ```typescript
    const api = axios.create({
      baseURL: 'http://localhost:8000/api',
