@@ -20,7 +20,7 @@ export const useTaskStore = defineStore('task', {
         this.tasks[columnId] = data.sort((a, b) => a.order - b.order);
       } catch (err: any) {
         this.error = err?.message ?? 'Failed to fetch tasks';
-        notify.error(this.error);
+        if (this.error) notify.error(this.error);
       } finally {
         this.loading = false;
       }
@@ -44,7 +44,7 @@ export const useTaskStore = defineStore('task', {
         return created;
       } catch (err: any) {
         this.error = err?.message ?? 'Failed to create task';
-        notify.error(this.error);
+        if (this.error) notify.error(this.error);
         throw err;
       }
     },
@@ -75,7 +75,7 @@ export const useTaskStore = defineStore('task', {
         }
 
         this.error = err?.message ?? 'Failed to update task';
-        notify.error(this.error);
+        if (this.error) notify.error(this.error);
         throw err;
       }
     },
@@ -104,7 +104,7 @@ export const useTaskStore = defineStore('task', {
         notify.error('Task deleted');
       } catch (err: any) {
         this.error = err?.message ?? 'Failed to delete task';
-        notify.error(this.error);
+        if (this.error) notify.error(this.error);
         throw err;
       }
     },
@@ -171,7 +171,7 @@ export const useTaskStore = defineStore('task', {
         this.tasks[toColumnId] = snapshotTo;
 
         this.error = err?.message ?? 'Failed to move task';
-        notify.error(this.error);
+        if (this.error) notify.error(this.error);
       }
     },
   },

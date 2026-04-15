@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-background font-sans antialiased">
     <router-view />
-    <Toaster position="top-right" richColors duration="4000" />
+    <Toaster position="top-right" richColors :duration="4000" />
   </div>
 </template>
 

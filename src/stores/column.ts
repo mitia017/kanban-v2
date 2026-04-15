@@ -27,7 +27,7 @@ export const useColumnStore = defineStore('column', {
         this.columns = normalizeColumns(data);
       } catch (err: any) {
         this.error = err?.message ?? 'Failed to fetch columns';
-        notify.error(this.error);
+        if (this.error) notify.error(this.error);
       } finally {
         this.loading = false;
       }
@@ -47,7 +47,7 @@ export const useColumnStore = defineStore('column', {
         return response.data;
       } catch (err: any) {
         this.error = err?.message ?? 'Failed to create column';
-        notify.error(this.error);
+        if (this.error) notify.error(this.error);
         throw err;
       }
     },
@@ -79,7 +79,7 @@ export const useColumnStore = defineStore('column', {
         }
 
         this.error = err?.message ?? 'Failed to update column';
-        notify.error(this.error);
+        if (this.error) notify.error(this.error);
         throw err;
       }
     },
@@ -100,7 +100,7 @@ export const useColumnStore = defineStore('column', {
         notify.error('Column deleted');
       } catch (err: any) {
         this.error = err?.message ?? 'Failed to delete column';
-        notify.error(this.error);
+        if (this.error) notify.error(this.error);
         throw err;
       }
     },
@@ -118,7 +118,7 @@ export const useColumnStore = defineStore('column', {
         this.columns = snapshot;
 
         this.error = err?.message ?? 'Failed to reorder columns';
-        notify.error(this.error);
+        if (this.error) notify.error(this.error);
       }
     },
   },
