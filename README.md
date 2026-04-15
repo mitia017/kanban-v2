@@ -80,6 +80,3 @@ The application is designed to work with a Laravel REST API. Ensure your backend
 - [ ] Task labels and due dates.
 - [ ] Search and filtering for tasks.
 
----
-
-Built with ❤️ by Jules.
