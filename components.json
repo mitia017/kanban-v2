@@ -12,5 +12,15 @@
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils"
+  },
+  "vite": {
+    "plugins": [
+      {
+        "name": "unplugin-icons/vite",
+        "options": {
+          "compiler": "vue3"
+        }
+      }
+    ]
   }
 }
