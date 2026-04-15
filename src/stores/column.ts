@@ -1,7 +1,13 @@
 import { defineStore } from 'pinia';
-import { columnService } from '@/api/services';
+import { columnService } from '@/services/column.service';
 import type { Column } from '@/types';
-import { toast } from 'vue-sonner';
+import { notify } from '@/services/notification.service';
+
+import {
+  normalizeColumns,
+  reindexColumns,
+  extractOrderUpdates,
+} from '@/domain/column.domain';
 
 export const useColumnStore = defineStore('column', {
   state: () => ({
@@ -13,12 +19,15 @@ export const useColumnStore = defineStore('column', {
   actions: {
     async fetchColumns(kanbanId: number) {
       this.loading = true;
+
       try {
-        const response = await columnService.getByKanban(kanbanId);
-        this.columns = response.data.sort((a, b) => a.order - b.order);
+        const { data } = await columnService.getByKanban(kanbanId);
+
+        // domain responsibility
+        this.columns = normalizeColumns(data);
       } catch (err: any) {
-        this.error = err.message || 'Failed to fetch columns';
-        toast.error(this.error || 'Error');
+        this.error = err?.message ?? 'Failed to fetch columns';
+        notify.error(this.error);
       } finally {
         this.loading = false;
       }
@@ -26,37 +35,51 @@ export const useColumnStore = defineStore('column', {
 
     async createColumn(kanbanId: number, data: Partial<Column>) {
       try {
-        const order = this.columns.length;
         const response = await columnService.create(kanbanId, {
           ...data,
-          order,
+          order: this.columns.length,
         });
+
         this.columns.push(response.data);
-        toast.success('Column added');
+
+        notify.success('Column added');
+
         return response.data;
       } catch (err: any) {
-        this.error = err.message || 'Failed to create column';
-        toast.error(this.error || 'Error');
+        this.error = err?.message ?? 'Failed to create column';
+        notify.error(this.error);
         throw err;
       }
     },
 
     async updateColumn(id: number, data: Partial<Column>) {
       const index = this.columns.findIndex((c) => c.id === id);
-      const originalColumn = index !== -1 ? { ...this.columns[index] } : null;
+      const snapshot = index !== -1 ? { ...this.columns[index] } : null;
 
+      // optimistic update
       if (index !== -1) {
-        this.columns[index] = { ...this.columns[index], ...data };
+        this.columns[index] = {
+          ...this.columns[index],
+          ...data,
+        };
       }
 
       try {
-        const response = await columnService.update(id, data);
-        if (index !== -1) this.columns[index] = response.data;
+        const { data: updated } = await columnService.update(id, data);
+
+        if (index !== -1) {
+          this.columns[index] = updated;
+        }
+
+        notify.success('Column updated');
       } catch (err: any) {
-        if (index !== -1 && originalColumn)
-          this.columns[index] = originalColumn;
-        this.error = err.message || 'Failed to update column';
-        toast.error(this.error || 'Error');
+        // rollback
+        if (index !== -1 && snapshot) {
+          this.columns[index] = snapshot;
+        }
+
+        this.error = err?.message ?? 'Failed to update column';
+        notify.error(this.error);
         throw err;
       }
     },
@@ -64,21 +87,20 @@ export const useColumnStore = defineStore('column', {
     async deleteColumn(id: number) {
       try {
         await columnService.delete(id);
+
+        // remove
         this.columns = this.columns.filter((c) => c.id !== id);
 
-        // Recalcul des orders après suppression
-        this.columns = this.columns.map((col, i) => ({ ...col, order: i }));
+        // reindex via domain
+        this.columns = reindexColumns(this.columns);
 
-        const updates = this.columns.map((col) => ({
-          id: col.id,
-          order: col.order,
-        }));
-        if (updates.length > 0) await columnService.reorder(updates);
+        // sync backend order
+        await columnService.reorder(extractOrderUpdates(this.columns));
 
-        toast.success('Column deleted');
+        notify.error('Column deleted');
       } catch (err: any) {
-        this.error = err.message || 'Failed to delete column';
-        toast.error(this.error || 'Error');
+        this.error = err?.message ?? 'Failed to delete column';
+        notify.error(this.error);
         throw err;
       }
     },
@@ -86,21 +108,17 @@ export const useColumnStore = defineStore('column', {
     async updateColumnsOrder(newColumns: Column[]) {
       const snapshot = [...this.columns];
 
-      // Recalcul propre des orders selon nouvelle position
-      this.columns = newColumns.map((col, index) => ({ ...col, order: index }));
+      // optimistic reorder via domain
+      this.columns = reindexColumns(newColumns);
 
       try {
-        // Un seul appel batch vers Laravel
-        const updates = this.columns.map((col) => ({
-          id: col.id,
-          order: col.order,
-        }));
-        await columnService.reorder(updates);
+        await columnService.reorder(extractOrderUpdates(this.columns));
       } catch (err: any) {
-        // Rollback
+        // rollback strict
         this.columns = snapshot;
-        this.error = err.message || 'Failed to reorder columns';
-        toast.error(this.error || 'Error');
+
+        this.error = err?.message ?? 'Failed to reorder columns';
+        notify.error(this.error);
       }
     },
   },

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue';
+import { onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useKanbanStore } from '@/stores/kanban';
 import { useColumnStore } from '@/stores/column';
@@ -18,14 +18,20 @@ const columnStore = useColumnStore();
 const kanbanId = computed(() => Number(route.params.id));
 
 onMounted(async () => {
-  await kanbanStore.fetchKanban(kanbanId.value);
-  await columnStore.fetchColumns(kanbanId.value);
+  await Promise.all([
+    kanbanStore.fetchKanban(kanbanId.value),
+    columnStore.fetchColumns(kanbanId.value),
+  ]);
 });
 
-const columns = computed({
-  get: () => columnStore.columns,
-  set: (value) => columnStore.updateColumnsOrder(value),
-});
+const columns = computed(() => columnStore.columns);
+
+const handleColumnDrag = async (evt: any) => {
+  const moved = evt.added || evt.moved;
+  if (!moved) return;
+
+  await columnStore.updateColumnsOrder(columnStore.columns);
+};
 
 const handleAddColumn = async () => {
   await columnStore.createColumn(kanbanId.value, {
@@ -43,7 +49,6 @@ const goBack = () => router.push({ name: 'kanban-list' });
 
 <template>
   <div class="h-screen flex flex-col overflow-hidden bg-[#f8fafc]">
-    <!-- Sticky Header -->
     <header
       class="flex-none h-16 border-b bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10 shadow-sm"
     >
@@ -56,6 +61,7 @@ const goBack = () => router.push({ name: 'kanban-list' });
         >
           <ArrowLeft class="w-5 h-5" />
         </Button>
+
         <div v-if="kanbanStore.currentKanban" class="flex-1 max-w-md">
           <EditableTitle
             v-model="kanbanStore.currentKanban.title"
@@ -64,6 +70,7 @@ const goBack = () => router.push({ name: 'kanban-list' });
             @change="updateBoardTitle"
           />
         </div>
+
         <Skeleton v-else class="h-8 w-48" />
       </div>
 
@@ -72,9 +79,10 @@ const goBack = () => router.push({ name: 'kanban-list' });
           <Settings class="w-4 h-4 mr-2" />
           Board Settings
         </Button>
+
         <Button
           size="sm"
-          class="rounded-xl shadow-md bg-[#b9a4e6] text-slate-950 hover:bg-[#a17de0] hover:text-slate-50"
+          class="rounded-xl shadow-md bg-[#36868d] text-gray-100 hover:bg-[#49b4be] hover:text-slate-50"
           @click="handleAddColumn"
         >
           <Plus class="w-4 h-4 mr-2" />
@@ -82,8 +90,6 @@ const goBack = () => router.push({ name: 'kanban-list' });
         </Button>
       </div>
     </header>
-
-    <!-- Board Content -->
     <main class="flex-1 overflow-x-auto overflow-y-hidden p-6">
       <div
         v-if="columnStore.loading && columnStore.columns.length === 0"
@@ -98,16 +104,18 @@ const goBack = () => router.push({ name: 'kanban-list' });
 
       <div v-else class="h-full">
         <draggable
-          v-model="columns"
+          :list="columns"
           item-key="id"
           class="flex gap-6 h-full items-start"
           handle=".column-handle"
           ghost-class="opacity-50"
           :animation="200"
+          @change="handleColumnDrag"
         >
           <template #item="{ element }">
             <ColumnComponent :column="element" />
           </template>
+
           <template #footer>
             <button
               @click="handleAddColumn"
@@ -122,20 +130,3 @@ const goBack = () => router.push({ name: 'kanban-list' });
     </main>
   </div>
 </template>
-
-<style scoped>
-/* Custom scrollbar for horizontal scrolling */
-main::-webkit-scrollbar {
-  height: 8px;
-}
-main::-webkit-scrollbar-track {
-  background: transparent;
-}
-main::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-main::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-</style>

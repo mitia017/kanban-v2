@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
-import { kanbanService } from '@/api/services';
+import { kanbanService } from '@/services/kanban.service';
 import type { Kanban } from '@/types';
-import { toast } from 'vue-sonner';
+import { notify } from '@/services/notification.service';
 
 export const useKanbanStore = defineStore('kanban', {
   state: () => ({
@@ -10,67 +10,105 @@ export const useKanbanStore = defineStore('kanban', {
     loading: false,
     error: null as string | null,
   }),
+
   actions: {
+    setError(message: string) {
+      this.error = message;
+    },
+
+    clearError() {
+      this.error = null;
+    },
+
     async fetchKanbans() {
       this.loading = true;
+      this.clearError();
+
       try {
-        const response = await kanbanService.getAll();
-        this.kanbans = response.data;
+        const { data } = await kanbanService.getAll();
+        this.kanbans = data;
       } catch (err: any) {
-        this.error = err.message || 'Failed to fetch kanbans';
-        toast.error(this.error || 'Error');
+        this.setError(err?.message ?? 'Failed to fetch kanbans');
+        notify.error(this.error as string);
       } finally {
         this.loading = false;
       }
     },
+
     async fetchKanban(id: number) {
       this.loading = true;
+      this.clearError();
+
       try {
-        const response = await kanbanService.getOne(id);
-        this.currentKanban = response.data;
+        const { data } = await kanbanService.getOne(id);
+        this.currentKanban = data;
       } catch (err: any) {
-        this.error = err.message || 'Failed to fetch kanban';
-        toast.error(this.error || 'Error');
+        this.setError(err?.message ?? 'Failed to fetch kanban');
+        notify.error(this.error as string);
       } finally {
         this.loading = false;
       }
     },
-    async createKanban(data: Partial<Kanban>) {
+
+    async createKanban(payload: Partial<Kanban>) {
+      this.clearError();
+
       try {
-        const response = await kanbanService.create(data);
-        this.kanbans.push(response.data);
-        toast.success('Board created successfully');
-        return response.data;
+        const { data } = await kanbanService.create(payload);
+        this.kanbans.push(data);
+
+        notify.success('Board created successfully');
+        return data;
       } catch (err: any) {
-        this.error = err.message || 'Failed to create kanban';
-        toast.error(this.error || 'Error');
+        this.setError(err?.message ?? 'Failed to create kanban');
+        notify.error(this.error as string);
         throw err;
       }
     },
-    async updateKanban(id: number, data: Partial<Kanban>) {
+
+    async updateKanban(id: number, payload: Partial<Kanban>) {
+      this.clearError();
+
       try {
-        const response = await kanbanService.update(id, data);
-        const index = this.kanbans.findIndex(k => k.id === id);
-        if (index !== -1) this.kanbans[index] = response.data;
-        if (this.currentKanban?.id === id) this.currentKanban = response.data;
-        toast.success('Board updated');
+        const { data } = await kanbanService.update(id, payload);
+
+        const index = this.kanbans.findIndex((k) => k.id === id);
+
+        if (index !== -1) {
+          this.kanbans[index] = data;
+        }
+
+        if (this.currentKanban?.id === id) {
+          this.currentKanban = data;
+        }
+
+        notify.success('Board updated');
+        return data;
       } catch (err: any) {
-        this.error = err.message || 'Failed to update kanban';
-        toast.error(this.error || 'Error');
+        this.setError(err?.message ?? 'Failed to update kanban');
+        notify.error(this.error as string);
         throw err;
       }
     },
+
     async deleteKanban(id: number) {
+      this.clearError();
+
       try {
         await kanbanService.delete(id);
-        this.kanbans = this.kanbans.filter(k => k.id !== id);
-        if (this.currentKanban?.id === id) this.currentKanban = null;
-        toast.success('Board deleted');
+
+        this.kanbans = this.kanbans.filter((k) => k.id !== id);
+
+        if (this.currentKanban?.id === id) {
+          this.currentKanban = null;
+        }
+
+        notify.error('Board deleted');
       } catch (err: any) {
-        this.error = err.message || 'Failed to delete kanban';
-        toast.error(this.error || 'Error');
+        this.setError(err?.message ?? 'Failed to delete kanban');
+        notify.error(this.error as string);
         throw err;
       }
-    }
-  }
+    },
+  },
 });

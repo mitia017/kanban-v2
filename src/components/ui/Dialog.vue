@@ -8,19 +8,19 @@ import {
   DialogRoot,
   DialogTitle,
   DialogTrigger,
-} from 'radix-vue'
-import { cn } from '@/lib/utils'
-import { X } from 'lucide-vue-next'
+} from 'radix-vue';
+import { cn } from '@/lib/utils';
+import { X } from 'lucide-vue-next';
 
 const props = defineProps<{
-  open?: boolean
-  title?: string
-  description?: string
-}>()
+  open?: boolean;
+  title?: string;
+  description?: string;
+}>();
 
 const emits = defineEmits<{
-  (e: 'update:open', value: boolean): void
-}>()
+  (e: 'update:open', value: boolean): void;
+}>();
 </script>
 
 <template>
@@ -38,7 +38,10 @@ const emits = defineEmits<{
           >
             {{ title }}
           </DialogTitle>
-          <DialogDescription v-if="description" class="text-sm text-muted-foreground">
+          <DialogDescription
+            v-if="description"
+            class="text-sm text-muted-foreground"
+          >
             {{ description }}
           </DialogDescription>
         </div>

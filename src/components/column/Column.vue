@@ -10,12 +10,18 @@ import TaskCard from '@/components/task/TaskCard.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import draggable from 'vuedraggable';
 
+/* 🔥 NEW IMPORT */
+import ConfirmModal from '@/components/ui/ConfirmModal.vue';
+
 const props = defineProps<{
   column: Column;
 }>();
 
 const taskStore = useTaskStore();
 const columnStore = useColumnStore();
+
+/* 🔥 NEW STATE MODAL */
+const showDeleteModal = ref(false);
 
 onMounted(async () => {
   await taskStore.fetchTasks(props.column.id);
@@ -25,7 +31,6 @@ const tasks = computed({
   get: () => taskStore.tasks[props.column.id] || [],
   set: (value) => {
     // This is handled by vuedraggable and the moveTask action
-    // But we need a setter for v-model
   },
 });
 
@@ -41,12 +46,14 @@ const updateColumnTitle = async (newTitle: string) => {
   await columnStore.updateColumn(props.column.id, { title: newTitle });
 };
 
+/* 🔥 MODAL TRIGGER INSTEAD OF CONFIRM */
 const handleDeleteColumn = async () => {
-  if (
-    confirm('Are you sure you want to delete this column and all its tasks?')
-  ) {
-    await columnStore.deleteColumn(props.column.id);
-  }
+  showDeleteModal.value = true;
+};
+
+/* 🔥 CONFIRMED ACTION */
+const confirmDeleteColumn = async () => {
+  await columnStore.deleteColumn(props.column.id);
 };
 
 const onDragChange = (evt: any) => {
@@ -67,32 +74,35 @@ const onDragChange = (evt: any) => {
 
 <template>
   <div
-    class="w-80 flex-none flex flex-col max-h-full bg-[#b9a4e6] rounded-2xl border border-slate-200 shadow-sm group/column"
+    class="w-80 flex-none flex flex-col max-h-full bg-[#36868d] rounded-sm border border-slate-200 shadow-sm group/column"
   >
     <!-- Column Header -->
     <div
-      class="p-4 flex items-center justify-between column-handle cursor-grab active:cursor-grabbing"
+      class="p-2 flex items-center justify-between column-handle cursor-grab active:cursor-grabbing border-b mb-6"
     >
       <div class="flex items-center gap-2 flex-1 min-w-0">
         <GripVertical
           class="w-4 h-4 text-slate-400 opacity-0 group-hover/column:opacity-100 transition-opacity"
         />
+
         <EditableTitle
           v-model="props.column.title"
           as="h3"
-          class="font-bold text-slate-700"
+          class="font-bold text-gray-100"
           @change="updateColumnTitle"
         />
+
         <span
           class="bg-slate-200 text-slate-600 text-xs font-bold px-2 py-0.5 rounded-full"
         >
           {{ tasks.length }}
         </span>
       </div>
+
       <Button
         variant="ghost"
         size="icon"
-        class="h-8 w-8 text-blue-900 hover:text-destructive"
+        class="h-8 w-8 text-gray-100 hover:text-destructive"
         @click="handleDeleteColumn"
       >
         <Trash2 class="w-4 h-4" />
@@ -121,26 +131,21 @@ const onDragChange = (evt: any) => {
     <div class="p-3 mt-auto">
       <Button
         variant="ghost"
-        class="w-full justify-start text-slate-950 hover:text-blue-900 hover:bg-primary/5 rounded-xl font-medium"
+        class="w-full justify-start text-gray-100 hover:text-gray-200 hover:bg-primary/5 rounded-xl font-medium"
         @click="handleAddTask"
       >
         <Plus class="w-4 h-4 mr-2" />
         Add Task
       </Button>
     </div>
+
+    <ConfirmModal
+      v-model="showDeleteModal"
+      title="Delete column"
+      message="Are you sure you want to delete this column and all its tasks?"
+      confirm-text="Delete"
+      cancel-text="Cancel"
+      @confirm="confirmDeleteColumn"
+    />
   </div>
 </template>
-
-<style scoped>
-/* Custom scrollbar for task list */
-.overflow-y-auto::-webkit-scrollbar {
-  width: 5px;
-}
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: transparent;
-}
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
-}
-</style>
